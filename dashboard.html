@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DevOps Monitoring Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0f1117;
+      color: #e1e4e8;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 6px;
+      color: #58a6ff;
+    }
+    .subtitle {
+      color: #8b949e;
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .status-bar.healthy { background: #0d1f0d; border: 1px solid #238636; color: #3fb950; }
+    .status-bar.unhealthy { background: #2d1117; border: 1px solid #da3633; color: #f85149; }
+    .status-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .healthy .status-dot { background: #3fb950; }
+    .unhealthy .status-dot { background: #f85149; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card-label {
+      font-size: 12px;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .card-value {
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .card-value.green { color: #3fb950; }
+    .card-value.blue { color: #58a6ff; }
+    .card-value.yellow { color: #d29922; }
+    .card-value.red { color: #f85149; }
+
+    .log-section {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .log-section h2 {
+      font-size: 15px;
+      margin-bottom: 12px;
+      color: #c9d1d9;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      color: #8b949e;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-bottom: 1px solid #30363d;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #21262d;
+    }
+    .method { font-weight: 600; color: #58a6ff; }
+    .status-ok { color: #3fb950; }
+    .status-err { color: #f85149; }
+    .time-fast { color: #3fb950; }
+    .time-slow { color: #d29922; }
+    .time-critical { color: #f85149; }
+
+    .refresh-info {
+      text-align: center;
+      color: #484f58;
+      font-size: 12px;
+      margin-top: 16px;
+    }
+
+    .error-banner {
+      background: #2d1117;
+      border: 1px solid #da3633;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      color: #f85149;
+      display: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📡 DevOps Demo — Live Monitoring Dashboard</h1>
+  <p class="subtitle">Auto-refreshes every 2 seconds &nbsp;|&nbsp; Connected to http://localhost:3000</p>
+
+  <div id="error-banner" class="error-banner">
+    ⚠️ Cannot reach server — is it running? <code>npm start</code>
+  </div>
+
+  <div id="status-bar" class="status-bar healthy">
+    <div class="status-dot"></div>
+    <span id="status-text">ALL SYSTEMS OPERATIONAL</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Total Requests</div>
+      <div class="card-value blue" id="total-requests">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Error Count</div>
+      <div class="card-value green" id="error-count">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Error Rate</div>
+      <div class="card-value green" id="error-rate">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Avg Response Time</div>
+      <div class="card-value green" id="avg-response">—</div>
+    </div>
+  </div>
+
+  <div class="log-section">
+    <h2>📋 Recent Requests</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Method</th>
+          <th>Path</th>
+          <th>Status</th>
+          <th>Response Time</th>
+        </tr>
+      </thead>
+      <tbody id="log-body">
+        <tr><td colspan="5" style="color: #484f58; text-align:center;">Waiting for data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="refresh-info">Dashboard auto-refreshes every 2s &nbsp;|&nbsp; Press <kbd>F5</kbd> to reset</p>
+
+<script>
+  const API = "http://localhost:3000";
+
+  async function fetchMetrics() {
+    try {
+      const res = await fetch(`${API}/metrics`);
+      const data = await res.json();
+
+      document.getElementById("error-banner").style.display = "none";
+
+      // Update cards
+      document.getElementById("total-requests").textContent = data.totalRequests;
+
+      const errCountEl = document.getElementById("error-count");
+      errCountEl.textContent = data.errorCount;
+      errCountEl.className = "card-value " + (data.errorCount > 0 ? "red" : "green");
+
+      const errRateEl = document.getElementById("error-rate");
+      errRateEl.textContent = data.errorRate;
+      const errPct = parseFloat(data.errorRate);
+      errRateEl.className = "card-value " + (errPct > 10 ? "red" : errPct > 0 ? "yellow" : "green");
+
+      const avgEl = document.getElementById("avg-response");
+      avgEl.textContent = data.avgResponseTime;
+      const avgMs = parseFloat(data.avgResponseTime);
+      avgEl.className = "card-value " + (avgMs > 1000 ? "red" : avgMs > 200 ? "yellow" : "green");
+
+      // Update status bar
+      const bar = document.getElementById("status-bar");
+      const statusText = document.getElementById("status-text");
+      if (data.errorCount > 0 || avgMs > 1000) {
+        bar.className = "status-bar unhealthy";
+        statusText.textContent = "⚠ ISSUES DETECTED";
+      } else {
+        bar.className = "status-bar healthy";
+        statusText.textContent = "ALL SYSTEMS OPERATIONAL";
+      }
+
+      // Update log table
+      const tbody = document.getElementById("log-body");
+      if (data.recentRequests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:#484f58;text-align:center;">No requests yet — try hitting an endpoint!</td></tr>';
+      } else {
+        tbody.innerHTML = data.recentRequests.map(r => {
+          const time = new Date(r.timestamp).toLocaleTimeString();
+          const statusClass = r.status < 400 ? "status-ok" : "status-err";
+          const timeClass = r.responseTime > 1000 ? "time-critical" : r.responseTime > 200 ? "time-slow" : "time-fast";
+          return `<tr>
+            <td>${time}</td>
+            <td class="method">${r.method}</td>
+            <td>${r.path}</td>
+            <td class="${statusClass}">${r.status}</td>
+            <td class="${timeClass}">${r.responseTime}ms</td>
+          </tr>`;
+        }).join("");
+      }
+    } catch (err) {
+      document.getElementById("error-banner").style.display = "block";
+      document.getElementById("status-bar").className = "status-bar unhealthy";
+      document.getElementById("status-text").textContent = "SERVER UNREACHABLE";
+    }
+  }
+
+  // Poll every 2 seconds
+  fetchMetrics();
+  setInterval(fetchMetrics, 2000);
+</script>
+
+</body>
+</html>
