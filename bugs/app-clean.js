@@ -20,7 +20,6 @@ const products = [
 
 // --- Middleware: Request Logger (simulates monitoring) ---
 const requestLog = [];
-let totalRequestCount = 0;
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -34,7 +33,6 @@ app.use((req, res, next) => {
       timestamp: new Date().toISOString(),
     };
     requestLog.push(entry);
-    totalRequestCount++;
     if (requestLog.length > 100) requestLog.shift();
   });
 
@@ -119,7 +117,7 @@ app.get("/data", (req, res) => {
 //  BONUS: /metrics  — Monitoring Dashboard Data
 // =============================================
 app.get("/metrics", (req, res) => {
-  const totalRequests = totalRequestCount;
+  const totalRequests = requestLog.length;
   const errors = requestLog.filter((r) => r.status >= 400).length;
   const avgResponseTime =
     totalRequests > 0

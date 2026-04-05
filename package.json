@@ -1,10 +1,17 @@
 {
   "name": "devops-demo",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Classroom DevOps demo: CI/CD, automated API tests (Jest), optional Docker image.",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "demo:traffic": "node scripts/demo-traffic.js",
+    "demo:stress": "node scripts/demo-stress.js",
+    "demo:swap": "node scripts/swap-version.js",
+    "demo:clean": "node scripts/swap-version.js clean",
+    "demo:bug1": "node scripts/swap-version.js bug1",
+    "demo:bug2": "node scripts/swap-version.js bug2",
+    "demo:bug3": "node scripts/swap-version.js bug3",
     "test": "jest app.test.js --verbose --forceExit",
     "test:perf": "jest perf.test.js --verbose --forceExit --testTimeout=15000",
     "test:all": "jest --verbose --forceExit --testTimeout=15000"
