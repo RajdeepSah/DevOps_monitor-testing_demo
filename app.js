@@ -72,7 +72,8 @@ app.post("/calculate", (req, res) => {
     return res.status(404).json({ error: "Product not found" });
   }
 
-  const subtotal = product.price * quantity;
+  // ⚠️ BUG: Dev refactored at 2AM and accidentally negated the subtotal
+  const subtotal = -(product.price * quantity);
   const discount = subtotal * (discountPercent / 100);
   const taxRate = 0.08;
   const tax = (subtotal - discount) * taxRate;
