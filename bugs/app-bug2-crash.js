@@ -122,6 +122,10 @@ app.get("/data", (req, res) => {
 //  BONUS: /metrics  — Monitoring Dashboard Data
 // =============================================
 app.get("/metrics", (req, res) => {
+  const isMetricsPoll = (r) => r.method === "GET" && r.path === "/metrics";
+  const appTraffic = requestLog.filter((r) => !isMetricsPoll(r));
+  const metricsPolls = requestLog.filter(isMetricsPoll);
+
   const totalRequests = requestLog.length;
   const errors = requestLog.filter((r) => r.status >= 400).length;
   const avgResponseTime =
@@ -134,7 +138,8 @@ app.get("/metrics", (req, res) => {
     errorCount: errors,
     errorRate: totalRequests > 0 ? ((errors / totalRequests) * 100).toFixed(1) + "%" : "0%",
     avgResponseTime: avgResponseTime + "ms",
-    recentRequests: requestLog.slice(-10).reverse(),
+    recentApiRequests: appTraffic.slice(-12).reverse(),
+    recentPolls: metricsPolls.slice(-10).reverse(),
   });
 });
 

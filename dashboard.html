@@ -132,7 +132,7 @@
 <body>
 
   <h1>📡 DevOps Demo — Live Monitoring Dashboard</h1>
-  <p class="subtitle">Auto-refreshes every 2 seconds &nbsp;|&nbsp; Connected to http://localhost:3000</p>
+  <p class="subtitle">Auto-refreshes every 2 seconds &nbsp;|&nbsp; Connected to http://127.0.0.1:3000</p>
 
   <div id="error-banner" class="error-banner">
     ⚠️ Cannot reach server — is it running? <code>npm start</code>
@@ -164,6 +164,7 @@
 
   <div class="log-section">
     <h2>📋 Recent Requests</h2>
+    <p class="subtitle" style="margin-bottom:12px;font-size:12px;">API routes below; dashboard <code>GET /metrics</code> polls listed separately so both stay visible.</p>
     <table>
       <thead>
         <tr>
@@ -174,8 +175,23 @@
           <th>Response Time</th>
         </tr>
       </thead>
-      <tbody id="log-body">
+      <tbody id="log-api-body">
         <tr><td colspan="5" style="color: #484f58; text-align:center;">Waiting for data...</td></tr>
+      </tbody>
+    </table>
+    <h3 style="font-size:14px;margin:20px 0 10px;color:#8b949e;">Dashboard polling (GET /metrics)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Method</th>
+          <th>Path</th>
+          <th>Status</th>
+          <th>Response Time</th>
+        </tr>
+      </thead>
+      <tbody id="log-polls-body">
+        <tr><td colspan="5" style="color: #484f58; text-align:center;">—</td></tr>
       </tbody>
     </table>
   </div>
@@ -183,11 +199,12 @@
   <p class="refresh-info">Dashboard auto-refreshes every 2s &nbsp;|&nbsp; Press <kbd>F5</kbd> to reset</p>
 
 <script>
-  const API = "http://localhost:3000";
+  /* 127.0.0.1 avoids Windows “localhost” splitting traffic across IPv4 vs IPv6 (different processes → empty API table). */
+  const API = "http://127.0.0.1:3000";
 
   async function fetchMetrics() {
     try {
-      const res = await fetch(`${API}/metrics`);
+      const res = await fetch(`${API}/metrics`, { cache: "no-store" });
       const data = await res.json();
 
       document.getElementById("error-banner").style.display = "none";
@@ -220,12 +237,8 @@
         statusText.textContent = "ALL SYSTEMS OPERATIONAL";
       }
 
-      // Update log table
-      const tbody = document.getElementById("log-body");
-      if (data.recentRequests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color:#484f58;text-align:center;">No requests yet — try hitting an endpoint!</td></tr>';
-      } else {
-        tbody.innerHTML = data.recentRequests.map(r => {
+      function rowsHtml(list) {
+        return list.map(r => {
           const time = new Date(r.timestamp).toLocaleTimeString();
           const statusClass = r.status < 400 ? "status-ok" : "status-err";
           const timeClass = r.responseTime > 1000 ? "time-critical" : r.responseTime > 200 ? "time-slow" : "time-fast";
@@ -237,6 +250,30 @@
             <td class="${timeClass}">${r.responseTime}ms</td>
           </tr>`;
         }).join("");
+      }
+
+      const api = data.recentApiRequests || data.recentRequests || [];
+      const polls = data.recentPolls || [];
+
+      const apiBody = document.getElementById("log-api-body");
+      if (api.length === 0) {
+        const splitHint =
+          polls.length > 0
+            ? " Scripts may be calling <code>localhost</code> while this page uses <code>127.0.0.1</code> — match them or set <code>API_BASE=http://127.0.0.1:3000</code>. "
+            : "";
+        apiBody.innerHTML =
+          '<tr><td colspan="5" style="color:#484f58;text-align:center;">No API traffic yet — run <code>npm run demo:stress</code> or call /health, /data, …' +
+          splitHint +
+          "</td></tr>";
+      } else {
+        apiBody.innerHTML = rowsHtml(api);
+      }
+
+      const pollsBody = document.getElementById("log-polls-body");
+      if (polls.length === 0) {
+        pollsBody.innerHTML = '<tr><td colspan="5" style="color:#484f58;text-align:center;">No polls yet</td></tr>';
+      } else {
+        pollsBody.innerHTML = rowsHtml(polls);
       }
     } catch (err) {
       document.getElementById("error-banner").style.display = "block";

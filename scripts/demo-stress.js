@@ -2,7 +2,7 @@
  * Same idea as stress.sh — repeated hits while the server runs (for the dashboard).
  * Usage: node scripts/demo-stress.js [rounds]   (default rounds: 5)
  */
-const base = process.env.API_BASE || "http://localhost:3000";
+const base = process.env.API_BASE || "http://127.0.0.1:3000";
 const rounds = Math.max(1, parseInt(process.argv[2] || "5", 10) || 5);
 
 async function hit(method, path, body) {

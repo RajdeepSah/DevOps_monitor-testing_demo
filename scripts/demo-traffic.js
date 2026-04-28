@@ -1,8 +1,8 @@
 /**
  * Same requests as test-traffic.sh — works on Windows (PowerShell) without Bash/curl.
- * Requires: API running on http://localhost:3000 (npm start or Docker).
+ * Requires: API running on http://127.0.0.1:3000 (npm start or Docker).
  */
-const base = process.env.API_BASE || "http://localhost:3000";
+const base = process.env.API_BASE || "http://127.0.0.1:3000";
 
 async function req(method, path, body) {
   const url = path.startsWith("http") ? path : `${base}${path}`;
